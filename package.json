@@ -1,0 +1,31 @@
+{
+  "name": "ic3",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "client": "vite",
+    "build": "vite build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
+    "better-sqlite3": "^12.8.0",
+    "concurrently": "^9.2.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "multer": "^2.1.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "vite": "^8.0.3"
+  }
+}
