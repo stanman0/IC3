@@ -91,6 +91,8 @@ export default function Settings({ open, onClose, settings, onSettingsChange }) 
   const [localSetups, setLocalSetups] = useState(settings.setups)
   const [localCriteria, setLocalCriteria] = useState(settings.criteria)
   const [localBehaviors, setLocalBehaviors] = useState(settings.behaviors)
+  const [localMaxRiskTrade, setLocalMaxRiskTrade] = useState(settings.maxRiskPerTrade ?? '')
+  const [localMaxRiskDay, setLocalMaxRiskDay] = useState(settings.maxRiskPerDay ?? '')
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
@@ -99,21 +101,29 @@ export default function Settings({ open, onClose, settings, onSettingsChange }) 
     setLocalSetups(settings.setups)
     setLocalCriteria(settings.criteria)
     setLocalBehaviors(settings.behaviors)
+    setLocalMaxRiskTrade(settings.maxRiskPerTrade ?? '')
+    setLocalMaxRiskDay(settings.maxRiskPerDay ?? '')
   }, [settings])
 
   const handleSave = () => {
+    const maxRiskPerTrade = localMaxRiskTrade !== '' ? parseFloat(localMaxRiskTrade) : null
+    const maxRiskPerDay = localMaxRiskDay !== '' ? parseFloat(localMaxRiskDay) : null
     const newSettings = {
       instruments: localInstruments,
       directions: localDirections,
       setups: localSetups,
       criteria: localCriteria,
-      behaviors: localBehaviors
+      behaviors: localBehaviors,
+      maxRiskPerTrade,
+      maxRiskPerDay,
     }
     localStorage.setItem('ic3_instruments', JSON.stringify(localInstruments))
     localStorage.setItem('ic3_directions', JSON.stringify(localDirections))
     localStorage.setItem('ic3_setups', JSON.stringify(localSetups))
     localStorage.setItem('ic3_criteria', JSON.stringify(localCriteria))
     localStorage.setItem('ic3_behaviors', JSON.stringify(localBehaviors))
+    localStorage.setItem('ic3_max_risk_trade', JSON.stringify(maxRiskPerTrade))
+    localStorage.setItem('ic3_max_risk_day', JSON.stringify(maxRiskPerDay))
     onSettingsChange(newSettings)
     setSaved(true)
     setTimeout(() => {
@@ -161,6 +171,41 @@ export default function Settings({ open, onClose, settings, onSettingsChange }) 
             onChange={setLocalBehaviors}
             defaults={DEFAULT_BEHAVIORS}
           />
+
+          <div className="settings-section">
+            <div className="settings-section-title">Risk Management</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 10, color: 'var(--muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>
+                  Max Risk Per Trade ($)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={localMaxRiskTrade}
+                  onChange={e => setLocalMaxRiskTrade(e.target.value)}
+                  placeholder="e.g. 100"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 10, color: 'var(--muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>
+                  Max Risk Per Day ($)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={localMaxRiskDay}
+                  onChange={e => setLocalMaxRiskDay(e.target.value)}
+                  placeholder="e.g. 300"
+                />
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.5 }}>
+                Used to auto-grade the Risk Management execution score. Exceeding limits reduces the score proportionally.
+              </div>
+            </div>
+          </div>
         </div>
         <div className="settings-footer">
           <button className="btn btn-primary" onClick={handleSave} style={{ width: '100%' }}>

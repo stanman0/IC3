@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import JournalTab from './tabs/JournalTab'
-import PsychTab from './tabs/PsychTab'
+import PreMarketTab from './tabs/PreMarketTab'
 import WeeklyTab from './tabs/WeeklyTab'
 import HistoryTab from './tabs/HistoryTab'
 import Settings, { DEFAULT_INSTRUMENTS, DEFAULT_DIRECTIONS, DEFAULT_SETUPS, DEFAULT_CRITERIA, DEFAULT_BEHAVIORS } from './components/Settings'
@@ -12,21 +11,22 @@ function loadSettings() {
     const setups = JSON.parse(localStorage.getItem('ic3_setups')) || DEFAULT_SETUPS
     const criteria = JSON.parse(localStorage.getItem('ic3_criteria')) || DEFAULT_CRITERIA
     const behaviors = JSON.parse(localStorage.getItem('ic3_behaviors')) || DEFAULT_BEHAVIORS
-    return { instruments, directions, setups, criteria, behaviors }
+    const maxRiskPerTrade = JSON.parse(localStorage.getItem('ic3_max_risk_trade')) ?? null
+    const maxRiskPerDay = JSON.parse(localStorage.getItem('ic3_max_risk_day')) ?? null
+    return { instruments, directions, setups, criteria, behaviors, maxRiskPerTrade, maxRiskPerDay }
   } catch {
-    return { instruments: DEFAULT_INSTRUMENTS, directions: DEFAULT_DIRECTIONS, setups: DEFAULT_SETUPS, criteria: DEFAULT_CRITERIA, behaviors: DEFAULT_BEHAVIORS }
+    return { instruments: DEFAULT_INSTRUMENTS, directions: DEFAULT_DIRECTIONS, setups: DEFAULT_SETUPS, criteria: DEFAULT_CRITERIA, behaviors: DEFAULT_BEHAVIORS, maxRiskPerTrade: null, maxRiskPerDay: null }
   }
 }
 
 const TABS = [
-  { id: 'journal', label: 'Journal' },
-  { id: 'psych', label: 'Psychology' },
+  { id: 'premarket', label: 'Pre-Market' },
+  { id: 'history', label: 'Daily Trades' },
   { id: 'weekly', label: 'Weekly' },
-  { id: 'history', label: 'History' },
 ]
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('journal')
+  const [activeTab, setActiveTab] = useState('premarket')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settings, setSettings] = useState(loadSettings)
 
@@ -34,8 +34,8 @@ export default function App() {
     <div className="app">
       <div className="header">
         <div>
-          <div className="logo">IC<span>3</span></div>
-          <div className="tagline">The tape doesn't lie.</div>
+          <div className="logo">TradeForge</div>
+          <div className="tagline">Forge yourself into the trader you can be</div>
         </div>
         <button className="settings-btn" onClick={() => setSettingsOpen(true)} title="Settings">
           ⚙
@@ -54,11 +54,8 @@ export default function App() {
         ))}
       </div>
 
-      <div className={`panel ${activeTab === 'journal' ? 'active' : ''}`}>
-        <JournalTab settings={settings} />
-      </div>
-      <div className={`panel ${activeTab === 'psych' ? 'active' : ''}`}>
-        <PsychTab settings={settings} />
+      <div className={`panel ${activeTab === 'premarket' ? 'active' : ''}`}>
+        <PreMarketTab settings={settings} />
       </div>
       <div className={`panel ${activeTab === 'weekly' ? 'active' : ''}`}>
         <WeeklyTab settings={settings} />

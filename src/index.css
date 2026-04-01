@@ -1172,6 +1172,30 @@ label {
   font-size: 12px;
 }
 
+/* ----- CSV Import Modal ----- */
+
+.import-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.import-box {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 24px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
 /* ----- Responsive ----- */
 
 @media (max-width: 640px) {

@@ -1,12 +1,37 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import ScoreDisplay from '../components/ScoreDisplay'
 import Lightbox from '../components/Lightbox'
 
 const today = () => new Date().toISOString().split('T')[0]
 
+const POINT_VALUES = { ES: 50, MES: 5, NQ: 20, MNQ: 2, YM: 5, MYM: 0.5, RTY: 50, M2K: 5 }
+
+function calcPnl(instrument, direction, entry, exit, contracts) {
+  const pv = POINT_VALUES[instrument]
+  if (!pv || !entry || !exit || !contracts) return null
+  const points = direction === 'Long' ? exit - entry : entry - exit
+  return Math.round(points * Number(contracts) * pv * 100) / 100
+}
+
+function calcRisk(instrument, entry, stop, contracts) {
+  const pv = POINT_VALUES[instrument]
+  if (!pv || !entry || !stop || !contracts) return null
+  return Math.round(Math.abs(entry - stop) * Number(contracts) * pv * 100) / 100
+}
+
+function autoRiskScore(riskDollars, maxRiskPerTrade) {
+  if (!riskDollars || !maxRiskPerTrade) return 5
+  const ratio = riskDollars / maxRiskPerTrade
+  if (ratio <= 1.0) return 10
+  if (ratio <= 1.1) return 8
+  if (ratio <= 1.25) return 6
+  if (ratio <= 1.5) return 4
+  return 2
+}
+
 const SYSTEM_PROMPT = `You are IC3 — a brutally honest, deeply knowledgeable ICT trading coach. You know every concept in the ICT methodology: Smart Money Concepts, Order Blocks, Breaker Blocks, Fair Value Gaps, Liquidity sweeps, Market Structure Shifts, Kill Zones, Power of 3, OTE entries, NWOG/NDOG, Silver Bullet, PD arrays. When chart screenshots are provided, read them directly — call out what you see: visible OBs, FVGs, sweep wicks, displacement candles, structure. Your words carry weight because they are earned. You do not pad, you do not hedge, you do not repeat yourself. Use ## for section headers. Use **bold** only for ICT concept names.`
 
-export default function JournalTab({ settings }) {
+export default function JournalTab({ settings, onBack, onSaved }) {
   const [form, setForm] = useState({
     date: today(),
     instrument: 'ES',
@@ -30,7 +55,7 @@ export default function JournalTab({ settings }) {
   const [captions, setCaptions] = useState([])
   const [gradeOpen, setGradeOpen] = useState(false)
   const [criteriaChecked, setCriteriaChecked] = useState([])
-  const [execScores, setExecScores] = useState({ entry: 5, mgmt: 5, patience: 5, rules: 5 })
+  const [execScores, setExecScores] = useState({ entry: 5, mgmt: 5, patience: 5, rules: 5, risk: 5 })
   const [output, setOutput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [gradeResult, setGradeResult] = useState(null)
@@ -43,12 +68,19 @@ export default function JournalTab({ settings }) {
   const updateForm = (field, value) => {
     setForm(prev => {
       const next = { ...prev, [field]: value }
-      // Auto-calc R:R when prices change
+      const entry = parseFloat(field === 'entry_price' ? value : next.entry_price)
+      const exit  = parseFloat(field === 'exit_price'  ? value : next.exit_price)
+      const stop  = parseFloat(field === 'stop_price'  ? value : next.stop_price)
+      const dir   = field === 'direction' ? value : next.direction
+
+      // Auto-calc outcome from entry + exit + direction
+      if (['entry_price', 'exit_price', 'direction'].includes(field) && entry && exit) {
+        const points = dir === 'Long' ? exit - entry : entry - exit
+        next.outcome = points > 0 ? 'Win' : points < 0 ? 'Loss' : 'Breakeven'
+      }
+
+      // Auto-calc R:R from entry + exit + stop
       if (['entry_price', 'exit_price', 'stop_price', 'direction'].includes(field)) {
-        const entry = parseFloat(field === 'entry_price' ? value : next.entry_price)
-        const exit = parseFloat(field === 'exit_price' ? value : next.exit_price)
-        const stop = parseFloat(field === 'stop_price' ? value : next.stop_price)
-        const dir = field === 'direction' ? value : next.direction
         if (entry && stop && entry !== stop) {
           const risk = Math.abs(entry - stop)
           if (exit) {
@@ -57,9 +89,18 @@ export default function JournalTab({ settings }) {
           }
         }
       }
+
       return next
     })
+
   }
+
+  // Auto-update risk management score when prices/contracts change
+  useEffect(() => {
+    if (!settings.maxRiskPerTrade) return
+    const riskDollars = calcRisk(form.instrument, parseFloat(form.entry_price), parseFloat(form.stop_price), form.contracts)
+    setExecScores(prev => ({ ...prev, risk: autoRiskScore(riskDollars, settings.maxRiskPerTrade) }))
+  }, [form.entry_price, form.stop_price, form.contracts, form.instrument, settings.maxRiskPerTrade])
 
   const toggleCriteria = (item) => {
     setCriteriaChecked(prev =>
@@ -68,7 +109,7 @@ export default function JournalTab({ settings }) {
   }
 
   const handleFiles = (files) => {
-    const remaining = 10 - screenshots.length
+    const remaining = 25 - screenshots.length
     const newFiles = Array.from(files).slice(0, remaining)
     if (newFiles.length === 0) return
     const newScreenshots = newFiles.map(f => ({ file: f, url: URL.createObjectURL(f) }))
@@ -89,7 +130,7 @@ export default function JournalTab({ settings }) {
   const computeGrade = () => {
     if (!gradeOpen || criteriaChecked.length === 0) return null
     const criteriaScore = (criteriaChecked.length / settings.criteria.length) * 100
-    const execAvg = (execScores.entry + execScores.mgmt + execScores.patience + execScores.rules) / 4
+    const execAvg = (execScores.entry + execScores.mgmt + execScores.patience + execScores.rules + execScores.risk) / 5
     const overall = Math.round(criteriaScore * 0.5 + (execAvg / 10 * 100) * 0.5)
     let letter = 'F'
     if (overall >= 90) letter = 'A+'
@@ -269,7 +310,11 @@ Keep under ${wordLimit} words${grade ? ' if graded' : ''}. No hedging.`
       }
 
       setStatusMsg('✓ Trade saved')
-      setTimeout(() => setStatusMsg(''), 3000)
+      if (onSaved) {
+        setTimeout(() => onSaved(), 800)
+      } else {
+        setTimeout(() => setStatusMsg(''), 3000)
+      }
     } catch (err) {
       setStatusMsg('Error saving: ' + err.message)
     }
@@ -283,6 +328,11 @@ Keep under ${wordLimit} words${grade ? ' if graded' : ''}. No hedging.`
 
   return (
     <div>
+      {onBack && (
+        <div style={{ marginBottom: 16 }}>
+          <button className="btn btn-ghost" onClick={onBack}>← Back to Trades</button>
+        </div>
+      )}
       {/* Trade Details */}
       <div className="section-label">Trade Details</div>
       <div className="form-row cols-4">
@@ -330,10 +380,10 @@ Keep under ${wordLimit} words${grade ? ' if graded' : ''}. No hedging.`
         </div>
       </div>
 
-      {/* Outcome */}
-      <div className="form-row cols-3">
+      {/* Outcome / R:R / P&L / Risk */}
+      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
         <div>
-          <label>Outcome</label>
+          <label>Outcome <span style={{ color: 'var(--muted)', fontSize: 9, textTransform: 'none', letterSpacing: 0 }}>(auto)</span></label>
           <select value={form.outcome} onChange={e => updateForm('outcome', e.target.value)}>
             {['Win', 'Loss', 'Breakeven', 'Scratch'].map(v => <option key={v}>{v}</option>)}
           </select>
@@ -341,6 +391,30 @@ Keep under ${wordLimit} words${grade ? ' if graded' : ''}. No hedging.`
         <div>
           <label>R:R Achieved <span style={{ color: 'var(--muted)', fontSize: 9, textTransform: 'none', letterSpacing: 0 }}>(auto)</span></label>
           <input type="number" step="any" value={form.rr} onChange={e => setForm(prev => ({ ...prev, rr: e.target.value }))} />
+        </div>
+        <div>
+          <label>P&amp;L $</label>
+          {(() => {
+            const pnl = calcPnl(form.instrument, form.direction, parseFloat(form.entry_price), parseFloat(form.exit_price), form.contracts)
+            return (
+              <div className="detail-value" style={{ color: pnl == null ? 'var(--muted)' : pnl >= 0 ? 'var(--accent2)' : 'var(--danger)', fontWeight: 600 }}>
+                {pnl == null ? '—' : (pnl >= 0 ? '+' : '') + '$' + pnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            )
+          })()}
+        </div>
+        <div>
+          <label>Risk $</label>
+          {(() => {
+            const risk = calcRisk(form.instrument, parseFloat(form.entry_price), parseFloat(form.stop_price), form.contracts)
+            const over = settings.maxRiskPerTrade && risk > settings.maxRiskPerTrade
+            return (
+              <div className="detail-value" style={{ color: risk == null ? 'var(--muted)' : over ? 'var(--danger)' : 'var(--text)', fontWeight: risk != null ? 600 : 400 }}>
+                {risk == null ? '—' : '$' + risk.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {over && <span style={{ fontSize: 9, marginLeft: 4, color: 'var(--danger)' }}>▲ limit</span>}
+              </div>
+            )
+          })()}
         </div>
         <div>
           <label>HTF Bias</label>
@@ -444,7 +518,7 @@ Keep under ${wordLimit} words${grade ? ' if graded' : ''}. No hedging.`
               </div>
             ))}
           </div>
-          <div className="screenshot-counter">{screenshots.length} / 10 screenshots</div>
+          <div className="screenshot-counter">{screenshots.length} / 25 screenshots</div>
         </>
       )}
 
@@ -476,9 +550,13 @@ Keep under ${wordLimit} words${grade ? ' if graded' : ''}. No hedging.`
             { key: 'mgmt', label: 'Trade Management' },
             { key: 'patience', label: 'Patience' },
             { key: 'rules', label: 'Rule Adherence' },
-          ].map(({ key, label }) => (
+            { key: 'risk', label: 'Risk Management', auto: !!settings.maxRiskPerTrade },
+          ].map(({ key, label, auto }) => (
             <div key={key} className="slider-row">
-              <span className="slider-label">{label}</span>
+              <span className="slider-label">
+                {label}
+                {auto && <span style={{ fontSize: 9, color: 'var(--muted)', marginLeft: 4 }}>(auto)</span>}
+              </span>
               <input
                 type="range"
                 min="1"

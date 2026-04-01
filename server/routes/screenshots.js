@@ -19,8 +19,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// POST /upload — upload up to 10 screenshots
-router.post('/upload', upload.array('screenshots', 10), (req, res) => {
+// POST /upload — upload up to 25 screenshots
+router.post('/upload', upload.array('screenshots', 25), (req, res) => {
   try {
     const tradeId = req.body.tradeId;
     const paths = req.files.map(

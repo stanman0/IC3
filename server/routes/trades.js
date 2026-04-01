@@ -77,6 +77,30 @@ router.put('/:id', (req, res) => {
   }
 });
 
+// POST /import — bulk insert trades (e.g. from Tradovate CSV)
+router.post('/import', (req, res) => {
+  const { trades } = req.body
+  if (!Array.isArray(trades) || trades.length === 0) {
+    return res.status(400).json({ error: 'No trades provided' })
+  }
+
+  const insert = db.prepare(
+    `INSERT INTO trades (${TRADE_FIELDS.join(', ')}) VALUES (${TRADE_FIELDS.map(() => '?').join(', ')})`
+  )
+  const insertAll = db.transaction((list) => {
+    for (const trade of list) {
+      insert.run(...TRADE_FIELDS.map(f => trade[f] ?? null))
+    }
+  })
+
+  try {
+    insertAll(trades)
+    res.json({ imported: trades.length })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // DELETE /:id — delete trade by id
 router.delete('/:id', (req, res) => {
   try {

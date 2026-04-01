@@ -42,4 +42,36 @@ db.exec(`
   );
 `);
 
+// Add psychology columns to trades (safe — SQLite ignores if column exists via try/catch)
+const psychAlterations = [
+  'ALTER TABLE trades ADD COLUMN pre_mood INTEGER',
+  'ALTER TABLE trades ADD COLUMN pre_confidence INTEGER',
+  'ALTER TABLE trades ADD COLUMN behaviors_noted TEXT',
+  'ALTER TABLE trades ADD COLUMN mental_state TEXT',
+  'ALTER TABLE trades ADD COLUMN belief TEXT',
+  'ALTER TABLE trades ADD COLUMN psych_commitment TEXT',
+]
+for (const sql of psychAlterations) {
+  try { db.exec(sql) } catch {}
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS premarket (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT DEFAULT (datetime('now')),
+    date TEXT UNIQUE,
+    session TEXT,
+    htf_bias TEXT,
+    mood INTEGER,
+    confidence INTEGER,
+    key_levels TEXT,
+    narrative TEXT,
+    setups_watching TEXT,
+    game_plan TEXT,
+    news_events TEXT,
+    screenshot_paths TEXT,
+    ai_analysis TEXT
+  );
+`);
+
 module.exports = db;
