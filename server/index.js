@@ -8,6 +8,7 @@ const aiRouter = require('./routes/ai.js');
 const screenshotsRouter = require('./routes/screenshots.js');
 const premarketRouter = require('./routes/premarket.js');
 const newsRouter = require('./routes/news.js');
+const sessionNotesRouter = require('./routes/session_notes.js');
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/api/ai', aiRouter);
 app.use('/api/screenshots', screenshotsRouter);
 app.use('/api/premarket', premarketRouter);
 app.use('/api/news', newsRouter);
+app.use('/api/session-notes', sessionNotesRouter);
 
 // Serve static frontend build (Vite 'dist' folder)
 const distPath = path.join(__dirname, '..', 'dist');

@@ -45,6 +45,8 @@ export default function PreMarketTab({ settings }) {
   const [statusMsg, setStatusMsg] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [loadingNews, setLoadingNews] = useState(false)
+  const [biasVerdict, setBiasVerdict] = useState(null)
+  const [biasVerdictNotes, setBiasVerdictNotes] = useState("")
   const [lightbox, setLightbox] = useState({ open: false, index: 0 })
   const fileInputRef = useRef(null)
 
@@ -426,6 +428,38 @@ Under 350 words. Direct and specific.`
           </div>
         </div>
       )}
+
+      {/* Post-Session — filled after market close */}
+      <div className="post-session-block">
+        <div className="section-label" style={{ marginTop: 0 }}>Post-Session</div>
+        <div>
+          <label>Was your HTF bias confirmed by price action?</label>
+          <div className="verdict-btns">
+            {[
+              { key: 'confirmed',   label: '✓ Confirmed',   cls: 'confirmed' },
+              { key: 'mixed',       label: '~ Mixed',        cls: 'mixed' },
+              { key: 'invalidated', label: '✗ Invalidated',  cls: 'invalidated' },
+            ].map(v => (
+              <button
+                key={v.key}
+                className={`verdict-btn ${v.cls} ${biasVerdict === v.key ? "active" : ""}`}
+                onClick={() => setBiasVerdict(prev => prev === v.key ? null : v.key)}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+          {biasVerdict && (
+            <textarea
+              rows={2}
+              placeholder="Brief notes — what confirmed or invalidated your thesis?"
+              value={biasVerdictNotes}
+              onChange={e => setBiasVerdictNotes(e.target.value)}
+              style={{ marginTop: 10 }}
+            />
+          )}
+        </div>
+      </div>
 
       {lightbox.open && existingScreenshots.length > 0 && (
         <Lightbox

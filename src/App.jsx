@@ -63,11 +63,11 @@ export default function App() {
     <div className="app">
       <div className="header">
         <div>
-          <div className="logo">TradeForge</div>
-          <div className="tagline">Forge yourself into the trader you can be</div>
+          <div className="logo">IC3</div>
+          <div className="tagline">Trade Intelligence Journal</div>
         </div>
         <button className="settings-btn" onClick={() => setSettingsOpen(true)} title="Settings">
-          \u2699
+          {'\u2699'}
         </button>
       </div>
 

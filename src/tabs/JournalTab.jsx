@@ -133,8 +133,12 @@ export default function JournalTab({ settings, onBack, onSaved }) {
   const computeGrade = () => {
     if (!gradeOpen || criteriaChecked.length === 0) return null
     const criteriaScore = (criteriaChecked.length / settings.criteria.length) * 100
-    const execAvg = (execScores.entry + execScores.mgmt + execScores.patience + execScores.rules + execScores.risk) / 5
-    const overall = Math.round(criteriaScore * 0.5 + (execAvg / 10 * 100) * 0.5)
+    const execValues = [execScores.entry, execScores.mgmt, execScores.patience, execScores.rules, execScores.risk]
+    const hasExec = execValues.some(v => v > 0)
+    const execAvg = execValues.reduce((a, b) => a + b, 0) / 5
+    const overall = hasExec
+      ? Math.round(criteriaScore * 0.5 + (execAvg / 10 * 100) * 0.5)
+      : Math.round(criteriaScore)
     let letter = 'F'
     if (overall >= 90) letter = 'A+'
     else if (overall >= 80) letter = 'A'

@@ -99,4 +99,44 @@ db.exec(`
   );
 `);
 
+// Live session notes — timestamped intraday log per date
+db.exec(`
+  CREATE TABLE IF NOT EXISTS session_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT DEFAULT (datetime('now')),
+    date TEXT,
+    time TEXT,
+    note TEXT,
+    tag TEXT
+  );
+`);
+
+// Session notes theme + structured capture columns
+const sessionNotesAlterations = [
+  'ALTER TABLE session_notes ADD COLUMN theme TEXT',
+  'ALTER TABLE session_notes ADD COLUMN trade_phase TEXT',
+  'ALTER TABLE session_notes ADD COLUMN direction TEXT',
+  'ALTER TABLE session_notes ADD COLUMN conviction INTEGER',
+  'ALTER TABLE session_notes ADD COLUMN intensity INTEGER',
+  'ALTER TABLE session_notes ADD COLUMN state_tags TEXT',
+  'ALTER TABLE session_notes ADD COLUMN setup_type TEXT',
+  'ALTER TABLE session_notes ADD COLUMN price_level REAL',
+  'ALTER TABLE session_notes ADD COLUMN reaction_expected TEXT',
+  'ALTER TABLE session_notes ADD COLUMN invalidation_condition TEXT',
+  'ALTER TABLE session_notes ADD COLUMN setup_validated TEXT',
+  'ALTER TABLE session_notes ADD COLUMN premarket_candidate INTEGER DEFAULT 0',
+]
+for (const sql of sessionNotesAlterations) {
+  try { db.exec(sql) } catch {}
+}
+
+// Post-session bias verdict on premarket
+const premarketAlterations = [
+  'ALTER TABLE premarket ADD COLUMN bias_verdict TEXT',
+  'ALTER TABLE premarket ADD COLUMN bias_verdict_notes TEXT',
+]
+for (const sql of premarketAlterations) {
+  try { db.exec(sql) } catch {}
+}
+
 module.exports = db;

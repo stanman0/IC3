@@ -5,7 +5,13 @@ import CsvImportModal from '../components/CsvImportModal'
 import TradingCalendar from '../components/TradingCalendar'
 import MarkdownContent from '../components/MarkdownContent'
 import { useToast } from '../components/Toast'
+import SessionLog from '../components/SessionLog'
+import SessionCompanion from '../components/SessionCompanion'
 import JournalTab from './JournalTab'
+
+function todayDate() {
+  return new Date().toISOString().slice(0, 10)
+}
 
 const POINT_VALUES = { ES: 50, MES: 5, NQ: 20, MNQ: 2, YM: 5, MYM: 0.5, RTY: 50, M2K: 5 }
 
@@ -145,8 +151,12 @@ function TradeDetail({ trade, label, settings, onBack, onUpdate, onTradesChanged
   const computeEditGrade = () => {
     if (!gradeOpen || criteriaChecked.length === 0) return null
     const criteriaScore = (criteriaChecked.length / settings.criteria.length) * 100
-    const execAvg = (execScores.entry + execScores.mgmt + execScores.patience + execScores.rules + execScores.risk) / 5
-    const overall = Math.round(criteriaScore * 0.5 + (execAvg / 10 * 100) * 0.5)
+    const execValues = [execScores.entry, execScores.mgmt, execScores.patience, execScores.rules, execScores.risk]
+    const hasExec = execValues.some(v => v > 0)
+    const execAvg = execValues.reduce((a, b) => a + b, 0) / 5
+    const overall = hasExec
+      ? Math.round(criteriaScore * 0.5 + (execAvg / 10 * 100) * 0.5)
+      : Math.round(criteriaScore)
     let letter = 'F'
     if (overall >= 90) letter = 'A+'
     else if (overall >= 80) letter = 'A'
@@ -752,6 +762,9 @@ function TradeDetail({ trade, label, settings, onBack, onUpdate, onTradesChanged
         </>
       )}
 
+      {/* Session Notes */}
+      <SessionLog date={trade.date} readOnly={true} label="Session Notes" />
+
       {/* Lightbox */}
       {lightbox.open && ssPathsArr.length > 0 && (
         <Lightbox
@@ -883,7 +896,8 @@ export default function HistoryTab({ settings, onTradesChanged }) {
   const visibleTrades = selectedDate ? trades.filter(t => t.date === selectedDate) : trades
 
   return (
-    <div>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div className="section-label" style={{ margin: 0, flex: 1 }}>Daily Trades</div>
         <div className="view-toggle" style={{ marginLeft: 12 }}>
@@ -927,17 +941,16 @@ export default function HistoryTab({ settings, onTradesChanged }) {
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div className="section-label" style={{ margin: 0, flex: 1 }}>
-          {selectedDate ? `Trades \u2014 ${selectedDate}` : 'All Trades'}
-        </div>
-        {selectedDate && (
-          <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 10px', marginLeft: 12 }} onClick={() => setSelectedDate(null)}>
-            Clear filter
-          </button>
-        )}
-      </div>
-
-      {visibleTrades.length === 0 && (
+            <div className="section-label" style={{ margin: 0, flex: 1 }}>
+              {selectedDate ? `Trades \u2014 ${selectedDate}` : 'All Trades'}
+            </div>
+            {selectedDate && (
+              <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 10px', marginLeft: 12 }} onClick={() => setSelectedDate(null)}>
+                Clear filter
+              </button>
+            )}
+          </div>
+          {visibleTrades.length === 0 && (
         <div style={{ color: 'var(--muted)', fontSize: 12, fontFamily: 'var(--mono)', padding: '16px 0' }}>
           No trades on this day.
         </div>
@@ -1048,6 +1061,8 @@ export default function HistoryTab({ settings, onTradesChanged }) {
           onNavigate={(i) => setLightbox(prev => ({ ...prev, index: i }))}
         />
       )}
+      </div>
+      <SessionCompanion date={selectedDate || todayDate()} />
     </div>
   )
 }
