@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import MarkdownContent from '../components/MarkdownContent'
 
 const MOODS = [
   { emoji: '😣', label: 'Distressed', value: 1 },
@@ -177,7 +178,7 @@ Under 300 words. Direct, not harsh.`
             {streaming && <div className="spinner" />}
           </div>
           <div className="output-body">
-            {output}{streaming && <span className="cursor" />}
+            {streaming ? <>{output}<span className="cursor" /></> : <MarkdownContent>{output}</MarkdownContent>}
           </div>
         </div>
       )}

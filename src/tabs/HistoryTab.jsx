@@ -3,6 +3,8 @@ import Lightbox from '../components/Lightbox'
 import ScoreDisplay from '../components/ScoreDisplay'
 import CsvImportModal from '../components/CsvImportModal'
 import TradingCalendar from '../components/TradingCalendar'
+import MarkdownContent from '../components/MarkdownContent'
+import { useToast } from '../components/Toast'
 import JournalTab from './JournalTab'
 
 const POINT_VALUES = { ES: 50, MES: 5, NQ: 20, MNQ: 2, YM: 5, MYM: 0.5, RTY: 50, M2K: 5 }
@@ -93,7 +95,8 @@ function buildTradeLabels(trades) {
   return labels
 }
 
-function TradeDetail({ trade, label, settings, onBack, onUpdate }) {
+function TradeDetail({ trade, label, settings, onBack, onUpdate, onTradesChanged }) {
+  const showToast = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({ ...trade })
   const [lightbox, setLightbox] = useState({ open: false, index: 0 })
@@ -197,12 +200,15 @@ function TradeDetail({ trade, label, settings, onBack, onUpdate }) {
         })
       }
 
-      setStatusMsg('✓ Saved')
+      showToast('success', 'Trade saved')
+      setStatusMsg('')
       setIsEditing(false)
       setNewScreenshots([])
       onUpdate()
+      if (onTradesChanged) onTradesChanged()
     } catch (err) {
-      setStatusMsg('Error: ' + err.message)
+      showToast('error', 'Save failed: ' + err.message)
+      setStatusMsg('')
     }
   }
 
@@ -211,10 +217,12 @@ function TradeDetail({ trade, label, settings, onBack, onUpdate }) {
     try {
       const res = await fetch(`/api/trades/${trade.id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Delete failed')
+      showToast('success', 'Trade deleted')
       onBack()
       onUpdate()
+      if (onTradesChanged) onTradesChanged()
     } catch (err) {
-      alert('Error deleting trade: ' + err.message)
+      showToast('error', 'Delete failed: ' + err.message)
     }
   }
 
@@ -739,7 +747,7 @@ function TradeDetail({ trade, label, settings, onBack, onUpdate }) {
         <>
           <div className="section-label">IC3 Analysis</div>
           <div className="output-container">
-            <div className="output-body">{trade.ai_analysis}</div>
+            <div className="output-body"><MarkdownContent>{trade.ai_analysis}</MarkdownContent></div>
           </div>
         </>
       )}
@@ -757,13 +765,15 @@ function TradeDetail({ trade, label, settings, onBack, onUpdate }) {
   )
 }
 
-export default function HistoryTab({ settings }) {
+export default function HistoryTab({ settings, onTradesChanged }) {
+  const showToast = useToast()
   const [trades, setTrades] = useState([])
   const [selectedTrade, setSelectedTrade] = useState(null)
   const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0 })
   const [showImport, setShowImport] = useState(false)
   const [selectedDate, setSelectedDate] = useState(null)
   const [showNewTrade, setShowNewTrade] = useState(false)
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('ic3_view_mode') || 'card')
 
   useEffect(() => {
     fetchTrades()
@@ -778,9 +788,18 @@ export default function HistoryTab({ settings }) {
         const updated = data.find(t => t.id === selectedTrade.id)
         if (updated) setSelectedTrade(updated)
       }
+      if (onTradesChanged) onTradesChanged()
     } catch (err) {
       console.error('Failed to load trades:', err)
     }
+  }
+
+  const toggleViewMode = () => {
+    setViewMode(prev => {
+      const next = prev === 'card' ? 'table' : 'card'
+      localStorage.setItem('ic3_view_mode', next)
+      return next
+    })
   }
 
   const openLightbox = (paths, index) => {
@@ -830,9 +849,35 @@ export default function HistoryTab({ settings }) {
         settings={settings}
         onBack={() => setSelectedTrade(null)}
         onUpdate={fetchTrades}
+        onTradesChanged={onTradesChanged}
       />
     )
   }
+
+  // Streak dots — last 10 trades
+  const streakData = (() => {
+    const sorted = [...trades].sort((a, b) => {
+      if (a.date < b.date) return 1
+      if (a.date > b.date) return -1
+      return b.id - a.id
+    })
+    const dots = sorted.slice(0, 10).reverse().map(t => {
+      const o = (t.outcome || '').toLowerCase()
+      if (o === 'win') return 'win'
+      if (o === 'loss') return 'loss'
+      return 'be'
+    })
+    // Current streak
+    let streak = 0, streakType = null
+    for (const t of sorted) {
+      const o = (t.outcome || '').toLowerCase()
+      if (o !== 'win' && o !== 'loss') continue
+      if (!streakType) streakType = o
+      if (o === streakType) streak++
+      else break
+    }
+    return { dots, streak, streakType }
+  })()
 
   // List view
   const visibleTrades = selectedDate ? trades.filter(t => t.date === selectedDate) : trades
@@ -841,6 +886,10 @@ export default function HistoryTab({ settings }) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div className="section-label" style={{ margin: 0, flex: 1 }}>Daily Trades</div>
+        <div className="view-toggle" style={{ marginLeft: 12 }}>
+          <button className={viewMode === 'card' ? 'active' : ''} onClick={() => toggleViewMode()} title="Card view">&#9638;</button>
+          <button className={viewMode === 'table' ? 'active' : ''} onClick={() => toggleViewMode()} title="Table view">&#9776;</button>
+        </div>
         <button className="btn btn-ghost" style={{ fontSize: 11, padding: '5px 12px', marginLeft: 12 }} onClick={() => setShowNewTrade(true)}>
           + Add Trade
         </button>
@@ -852,7 +901,7 @@ export default function HistoryTab({ settings }) {
       {showImport && (
         <CsvImportModal
           onClose={() => setShowImport(false)}
-          onImported={(count) => { setShowImport(false); fetchTrades() }}
+          onImported={(count) => { setShowImport(false); fetchTrades(); showToast('success', `${count} trade${count !== 1 ? 's' : ''} imported`) }}
         />
       )}
 
@@ -862,9 +911,24 @@ export default function HistoryTab({ settings }) {
         onDaySelect={setSelectedDate}
       />
 
+      {/* Streak dots */}
+      {trades.length > 0 && (
+        <div className="streak-row">
+          {streakData.streakType && (
+            <span className="streak-label" style={{ color: streakData.streakType === 'win' ? 'var(--accent2)' : 'var(--danger)' }}>
+              {streakData.streakType === 'win' ? 'W' : 'L'}{streakData.streak}
+            </span>
+          )}
+          <div className="streak-dots">
+            {streakData.dots.map((d, i) => <span key={i} className={`streak-dot ${d}`} />)}
+          </div>
+          <span style={{ fontSize: 9, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>Last {streakData.dots.length}</span>
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div className="section-label" style={{ margin: 0, flex: 1 }}>
-          {selectedDate ? `Trades — ${selectedDate}` : 'All Trades'}
+          {selectedDate ? `Trades \u2014 ${selectedDate}` : 'All Trades'}
         </div>
         {selectedDate && (
           <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 10px', marginLeft: 12 }} onClick={() => setSelectedDate(null)}>
@@ -879,7 +943,47 @@ export default function HistoryTab({ settings }) {
         </div>
       )}
 
-      {visibleTrades.map(trade => {
+      {/* TABLE VIEW */}
+      {viewMode === 'table' && visibleTrades.length > 0 && (
+        <div style={{ borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden', marginTop: 8 }}>
+          <table className="trade-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Instrument</th>
+                <th>Side</th>
+                <th>Outcome</th>
+                <th style={{ textAlign: 'right' }}>R:R</th>
+                <th style={{ textAlign: 'right' }}>P&L</th>
+                <th>Setup</th>
+                <th>Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleTrades.map(trade => {
+                const pnl = calcPnl(trade.instrument, trade.direction, trade.entry_price, trade.exit_price, trade.contracts)
+                return (
+                  <tr key={trade.id} onClick={() => setSelectedTrade(trade)}>
+                    <td>{trade.date}</td>
+                    <td>{trade.instrument}</td>
+                    <td style={{ color: trade.direction === 'Long' ? 'var(--accent2)' : 'var(--danger)' }}>{trade.direction}</td>
+                    <td><span className={`tag ${outcomeTagClass(trade.outcome)}`}>{trade.outcome}</span></td>
+                    <td className="col-rr">{trade.rr != null ? trade.rr + 'R' : '\u2014'}</td>
+                    <td className="col-pnl" style={{ color: pnl == null ? 'var(--muted)' : pnl >= 0 ? 'var(--accent2)' : 'var(--danger)' }}>
+                      {pnl == null ? '\u2014' : (pnl >= 0 ? '+' : '') + '$' + Math.abs(pnl).toFixed(0)}
+                    </td>
+                    <td style={{ color: 'var(--purple)' }}>{trade.setup || '\u2014'}</td>
+                    <td>{trade.grade || '\u2014'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* CARD VIEW */}
+      {viewMode === 'card' && visibleTrades.map(trade => {
         let ssPathsArr = []
         try { ssPathsArr = JSON.parse(trade.screenshot_paths || '[]') } catch {}
 
@@ -891,7 +995,7 @@ export default function HistoryTab({ settings }) {
           >
             <div className="trade-card-header">
               <span className="trade-card-title">
-                {labels[trade.id]} — {trade.date}
+                {labels[trade.id]} \u2014 {trade.date}
               </span>
               <div className="trade-card-tags">
                 <span className={`tag ${outcomeTagClass(trade.outcome)}`}>{trade.outcome}</span>
@@ -911,7 +1015,7 @@ export default function HistoryTab({ settings }) {
                   return <span className="tag tag-amber">R ${risk.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                 })()}
                 {trade.setup && <span className="tag tag-purple">{trade.setup}</span>}
-                {ssPathsArr.length > 0 && <span className="tag tag-amber">📸 {ssPathsArr.length}</span>}
+                {ssPathsArr.length > 0 && <span className="tag tag-amber">\ud83d\udcf8 {ssPathsArr.length}</span>}
                 {trade.grade && <span className="tag tag-amber">{trade.grade}</span>}
               </div>
             </div>

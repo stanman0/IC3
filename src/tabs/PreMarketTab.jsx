@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Lightbox from '../components/Lightbox'
+import MarkdownContent from '../components/MarkdownContent'
+import { useToast } from '../components/Toast'
 
 const MOODS = [
   { emoji: '😣', label: 'Distressed', value: 1 },
@@ -24,6 +26,7 @@ function today() {
 }
 
 export default function PreMarketTab({ settings }) {
+  const showToast = useToast()
   const [date, setDate] = useState(today())
   const [recordId, setRecordId] = useState(null)
   const [session, setSession] = useState('')
@@ -173,10 +176,11 @@ export default function PreMarketTab({ settings }) {
         })
       }
 
-      setStatusMsg('✓ Saved')
-      setTimeout(() => setStatusMsg(''), 3000)
+      showToast('success', 'Plan saved')
+      setStatusMsg('')
     } catch (err) {
-      setStatusMsg('Error: ' + err.message)
+      showToast('error', 'Save failed: ' + err.message)
+      setStatusMsg('')
     }
   }
 
@@ -418,7 +422,7 @@ Under 350 words. Direct and specific.`
             {streaming && <div className="spinner" />}
           </div>
           <div className="output-body">
-            {aiAnalysis}{streaming && <span className="cursor" />}
+            {streaming ? <>{aiAnalysis}<span className="cursor" /></> : <MarkdownContent>{aiAnalysis}</MarkdownContent>}
           </div>
         </div>
       )}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import ScoreDisplay from '../components/ScoreDisplay'
 import Lightbox from '../components/Lightbox'
+import MarkdownContent from '../components/MarkdownContent'
+import { useToast } from '../components/Toast'
 
 const today = () => new Date().toISOString().split('T')[0]
 
@@ -32,6 +34,7 @@ function autoRiskScore(riskDollars, maxRiskPerTrade) {
 const SYSTEM_PROMPT = `You are IC3 — a brutally honest, deeply knowledgeable ICT trading coach. You know every concept in the ICT methodology: Smart Money Concepts, Order Blocks, Breaker Blocks, Fair Value Gaps, Liquidity sweeps, Market Structure Shifts, Kill Zones, Power of 3, OTE entries, NWOG/NDOG, Silver Bullet, PD arrays. When chart screenshots are provided, read them directly — call out what you see: visible OBs, FVGs, sweep wicks, displacement candles, structure. Your words carry weight because they are earned. You do not pad, you do not hedge, you do not repeat yourself. Use ## for section headers. Use **bold** only for ICT concept names.`
 
 export default function JournalTab({ settings, onBack, onSaved }) {
+  const showToast = useToast()
   const [form, setForm] = useState({
     date: today(),
     instrument: 'ES',
@@ -309,14 +312,14 @@ Keep under ${wordLimit} words${grade ? ' if graded' : ''}. No hedging.`
         })
       }
 
-      setStatusMsg('✓ Trade saved')
+      showToast('success', 'Trade saved')
+      setStatusMsg('')
       if (onSaved) {
         setTimeout(() => onSaved(), 800)
-      } else {
-        setTimeout(() => setStatusMsg(''), 3000)
       }
     } catch (err) {
-      setStatusMsg('Error saving: ' + err.message)
+      showToast('error', 'Save failed: ' + err.message)
+      setStatusMsg('')
     }
   }
 
@@ -588,7 +591,7 @@ Keep under ${wordLimit} words${grade ? ' if graded' : ''}. No hedging.`
           </div>
           {gradeResult && <ScoreDisplay grade={gradeResult.grade} score={gradeResult.score} criteriaChecked={criteriaChecked} />}
           <div className="output-body" ref={outputRef}>
-            {output}{streaming && <span className="cursor" />}
+            {streaming ? <>{output}<span className="cursor" /></> : <MarkdownContent>{output}</MarkdownContent>}
           </div>
         </div>
       )}

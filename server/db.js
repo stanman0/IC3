@@ -74,4 +74,29 @@ db.exec(`
   );
 `);
 
+// News/economic events cache table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS news_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_date TEXT,
+    event_time TEXT,
+    title TEXT,
+    country TEXT,
+    impact TEXT,
+    forecast TEXT,
+    previous TEXT,
+    actual TEXT,
+    source TEXT DEFAULT 'forex_factory',
+    UNIQUE(event_date, title, event_time)
+  );
+`);
+
+// Track when we last fetched news for a given week
+db.exec(`
+  CREATE TABLE IF NOT EXISTS news_fetch_log (
+    week_start TEXT PRIMARY KEY,
+    fetched_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
 module.exports = db;

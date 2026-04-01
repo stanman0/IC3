@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import PreMarketTab from './tabs/PreMarketTab'
 import WeeklyTab from './tabs/WeeklyTab'
 import HistoryTab from './tabs/HistoryTab'
+import DailyStatsBar from './components/DailyStatsBar'
 import Settings, { DEFAULT_INSTRUMENTS, DEFAULT_DIRECTIONS, DEFAULT_SETUPS, DEFAULT_CRITERIA, DEFAULT_BEHAVIORS } from './components/Settings'
 
 function loadSettings() {
@@ -20,15 +21,43 @@ function loadSettings() {
 }
 
 const TABS = [
-  { id: 'premarket', label: 'Pre-Market' },
-  { id: 'history', label: 'Daily Trades' },
-  { id: 'weekly', label: 'Weekly' },
+  { id: 'premarket', label: 'Pre-Market', key: '1' },
+  { id: 'history', label: 'Daily Trades', key: '2' },
+  { id: 'weekly', label: 'Weekly', key: '3' },
 ]
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('premarket')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settings, setSettings] = useState(loadSettings)
+  const [allTrades, setAllTrades] = useState([])
+
+  const fetchAllTrades = useCallback(async () => {
+    try {
+      const res = await fetch('/api/trades')
+      const data = await res.json()
+      setAllTrades(data)
+    } catch {}
+  }, [])
+
+  useEffect(() => { fetchAllTrades() }, [fetchAllTrades])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e) => {
+      // Ctrl+1/2/3 — switch tabs
+      if (e.ctrlKey && !e.shiftKey && !e.altKey) {
+        const tab = TABS.find(t => t.key === e.key)
+        if (tab) { e.preventDefault(); setActiveTab(tab.id); return }
+      }
+      // Escape — close settings
+      if (e.key === 'Escape' && settingsOpen) {
+        setSettingsOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [settingsOpen])
 
   return (
     <div className="app">
@@ -38,7 +67,7 @@ export default function App() {
           <div className="tagline">Forge yourself into the trader you can be</div>
         </div>
         <button className="settings-btn" onClick={() => setSettingsOpen(true)} title="Settings">
-          ⚙
+          \u2699
         </button>
       </div>
 
@@ -50,9 +79,12 @@ export default function App() {
             onClick={() => setActiveTab(t.id)}
           >
             {t.label}
+            <span className="kbd-hint">^{t.key}</span>
           </button>
         ))}
       </div>
+
+      <DailyStatsBar trades={allTrades} maxRiskPerDay={settings.maxRiskPerDay} />
 
       <div className={`panel ${activeTab === 'premarket' ? 'active' : ''}`}>
         <PreMarketTab settings={settings} />
@@ -61,7 +93,7 @@ export default function App() {
         <WeeklyTab settings={settings} />
       </div>
       <div className={`panel ${activeTab === 'history' ? 'active' : ''}`}>
-        <HistoryTab settings={settings} />
+        <HistoryTab settings={settings} onTradesChanged={fetchAllTrades} />
       </div>
 
       <Settings

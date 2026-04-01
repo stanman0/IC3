@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import MarkdownContent from '../components/MarkdownContent'
 
 const WEEKLY_SYSTEM = `You are IC3 — a performance-focused ICT trading coach conducting a weekly review. You speak with authority and specificity. Reference ICT concepts by name. You grade honestly. Use ## for section headers. Use **bold** for ICT concept names.`
 
@@ -263,7 +264,7 @@ Under 400 words. Coach tone.`
             {streaming && <div className="spinner" />}
           </div>
           <div className="output-body">
-            {output}{streaming && <span className="cursor" />}
+            {streaming ? <>{output}<span className="cursor" /></> : <MarkdownContent>{output}</MarkdownContent>}
           </div>
         </div>
       )}
