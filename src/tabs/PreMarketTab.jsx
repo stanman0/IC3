@@ -242,6 +242,10 @@ Under 350 words. Direct and specific.`
               if (parsed.text) {
                 fullText += parsed.text
                 setAiAnalysis(fullText)
+              } else if (parsed.error) {
+                setAiAnalysis(prev => prev + '\n\n**' + parsed.error + '**')
+                setStreaming(false)
+                return
               }
             } catch {}
           }

@@ -261,6 +261,10 @@ Keep under ${wordLimit} words${grade ? ' if graded' : ''}. No hedging.`
               if (parsed.text) {
                 fullText += parsed.text
                 setOutput(fullText)
+              } else if (parsed.error) {
+                setOutput(prev => prev + '\n\n**' + parsed.error + '**')
+                setStreaming(false)
+                return
               }
             } catch {}
           }
@@ -287,6 +291,7 @@ Keep under ${wordLimit} words${grade ? ' if graded' : ''}. No hedging.`
         exec_mgmt: execScores.mgmt,
         exec_patience: execScores.patience,
         exec_rules: execScores.rules,
+        exec_risk: execScores.risk,
         screenshot_paths: '[]'
       }
 

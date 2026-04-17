@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react'
 import PreMarketTab from './tabs/PreMarketTab'
 import WeeklyTab from './tabs/WeeklyTab'
 import HistoryTab from './tabs/HistoryTab'
+import PsychTab from './tabs/PsychTab'
 import DailyStatsBar from './components/DailyStatsBar'
+import IC3Chart from './components/IC3Chart/IC3Chart'
 import Settings, { DEFAULT_INSTRUMENTS, DEFAULT_DIRECTIONS, DEFAULT_SETUPS, DEFAULT_CRITERIA, DEFAULT_BEHAVIORS } from './components/Settings'
 
 function loadSettings() {
@@ -24,6 +26,8 @@ const TABS = [
   { id: 'premarket', label: 'Pre-Market', key: '1' },
   { id: 'history', label: 'Daily Trades', key: '2' },
   { id: 'weekly', label: 'Weekly', key: '3' },
+  { id: 'psych', label: 'Psychology', key: '4' },
+  { id: 'chart', label: 'Chart', key: '5' },
 ]
 
 export default function App() {
@@ -94,6 +98,12 @@ export default function App() {
       </div>
       <div className={`panel ${activeTab === 'history' ? 'active' : ''}`}>
         <HistoryTab settings={settings} onTradesChanged={fetchAllTrades} />
+      </div>
+      <div className={`panel ${activeTab === 'psych' ? 'active' : ''}`}>
+        <PsychTab settings={settings} />
+      </div>
+      <div className={`panel ${activeTab === 'chart' ? 'active' : ''}`}>
+        {activeTab === 'chart' && <IC3Chart symbol="ES" />}
       </div>
 
       <Settings

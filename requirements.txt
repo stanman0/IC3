@@ -1,0 +1,6 @@
+databento>=0.40.0
+pandas>=2.0.0
+pyarrow>=14.0.0
+tqdm>=4.0.0
+pytz>=2023.3
+python-dotenv>=1.0.0

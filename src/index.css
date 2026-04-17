@@ -16,8 +16,8 @@
   --danger: #e85c5c;
   --info: #5b9cf6;
   --purple: #a78bfa;
-  --mono: 'IBM Plex Mono', monospace;
-  --sans: 'Syne', sans-serif;
+  --mono: 'Fira Code', monospace;
+  --sans: 'Space Grotesk', sans-serif;
 }
 
 /* ----- Base Reset & Body ----- */

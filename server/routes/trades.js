@@ -7,7 +7,9 @@ const TRADE_FIELDS = [
   'entry_price', 'exit_price', 'stop_price', 'contracts',
   'htf_bias', 'setup', 'timeframe', 'narrative', 'execution_notes',
   'hindsight', 'ai_analysis', 'grade', 'grade_score', 'criteria_checked',
-  'exec_entry', 'exec_mgmt', 'exec_patience', 'exec_rules', 'screenshot_paths'
+  'exec_entry', 'exec_mgmt', 'exec_patience', 'exec_rules', 'exec_risk', 'screenshot_paths',
+  'raw_contract', 'annotations', 'indicators',
+  'pre_mood', 'pre_confidence', 'behaviors_noted', 'mental_state', 'belief', 'psych_commitment'
 ];
 
 // GET / — list all trades ordered by created_at DESC
@@ -100,6 +102,24 @@ router.post('/import', (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+// PATCH /:id — lightweight update for annotations/indicators only
+router.patch('/:id', (req, res) => {
+  try {
+    const { annotations, indicators } = req.body;
+    const fields = [];
+    const values = [];
+    if (annotations !== undefined) { fields.push('annotations = ?'); values.push(annotations); }
+    if (indicators !== undefined)  { fields.push('indicators = ?');  values.push(indicators);  }
+    if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
+    values.push(req.params.id);
+    const result = db.prepare(`UPDATE trades SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+    if (result.changes === 0) return res.status(404).json({ error: 'Trade not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // DELETE /:id — delete trade by id
 router.delete('/:id', (req, res) => {

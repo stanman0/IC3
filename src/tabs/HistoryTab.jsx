@@ -8,6 +8,7 @@ import { useToast } from '../components/Toast'
 import SessionLog from '../components/SessionLog'
 import SessionCompanion from '../components/SessionCompanion'
 import JournalTab from './JournalTab'
+import IC3Chart from '../components/IC3Chart/IC3Chart'
 
 function todayDate() {
   return new Date().toISOString().slice(0, 10)
@@ -104,6 +105,7 @@ function buildTradeLabels(trades) {
 function TradeDetail({ trade, label, settings, onBack, onUpdate, onTradesChanged }) {
   const showToast = useToast()
   const [isEditing, setIsEditing] = useState(false)
+  const [chartMode, setChartMode] = useState(false)
   const [editForm, setEditForm] = useState({ ...trade })
   const [lightbox, setLightbox] = useState({ open: false, index: 0 })
   const [statusMsg, setStatusMsg] = useState('')
@@ -267,6 +269,19 @@ function TradeDetail({ trade, label, settings, onBack, onUpdate, onTradesChanged
       ...Array.from(files).map(f => ({ file: f, url: URL.createObjectURL(f) }))
     ])
   }, [])
+
+  // Chart review mode — full-width chart with trade markers
+  if (chartMode) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
+        <IC3Chart
+          trade={trade}
+          symbol={trade.instrument || 'ES'}
+          onClose={() => setChartMode(false)}
+        />
+      </div>
+    )
+  }
 
   if (isEditing) {
     const editSsPaths = (() => { try { return JSON.parse(editForm.screenshot_paths || '[]') } catch { return [] } })()
@@ -546,6 +561,7 @@ function TradeDetail({ trade, label, settings, onBack, onUpdate, onTradesChanged
           ← Back to History
         </button>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-ghost" onClick={() => setChartMode(true)}>View Chart</button>
           <button className="btn btn-ghost" style={{ color: 'var(--danger)' }} onClick={handleDelete}>Delete</button>
           <button className="btn btn-ghost" onClick={enterEditMode}>Edit Trade</button>
         </div>

@@ -42,6 +42,22 @@ db.exec(`
   );
 `);
 
+// Add raw_contract column for exact contract symbol (e.g., ESM23)
+try { db.exec('ALTER TABLE trades ADD COLUMN raw_contract TEXT') } catch {}
+
+// Add chart drawing/indicator persistence columns
+try { db.exec('ALTER TABLE trades ADD COLUMN annotations TEXT') } catch {}
+try { db.exec('ALTER TABLE trades ADD COLUMN indicators TEXT') } catch {}
+
+// Indicator default configs per symbol root
+db.exec(`
+  CREATE TABLE IF NOT EXISTS indicator_defaults (
+    id     INTEGER PRIMARY KEY AUTOINCREMENT,
+    root   TEXT NOT NULL UNIQUE,
+    config TEXT NOT NULL
+  );
+`);
+
 // Add psychology columns to trades (safe — SQLite ignores if column exists via try/catch)
 const psychAlterations = [
   'ALTER TABLE trades ADD COLUMN pre_mood INTEGER',
@@ -138,5 +154,65 @@ const premarketAlterations = [
 for (const sql of premarketAlterations) {
   try { db.exec(sql) } catch {}
 }
+
+// Trading Insights: Karpathy-inspired knowledge layer
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS trading_insights (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      topic           TEXT NOT NULL,
+      category        TEXT NOT NULL CHECK(category IN (
+                        'pattern',
+                        'psychology',
+                        'session',
+                        'setup',
+                        'meta',
+                        'research'
+                      )),
+      content_md      TEXT NOT NULL,
+      source_trade_ids TEXT NOT NULL DEFAULT '[]',
+      last_updated    TEXT NOT NULL DEFAULT (datetime('now')),
+      version         INTEGER NOT NULL DEFAULT 1,
+      created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
+} catch {}
+
+try {
+  db.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS trading_insights_fts USING fts5(
+      topic, content_md, content='trading_insights', content_rowid='id'
+    )
+  `)
+} catch {}
+
+try {
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS trading_insights_ai AFTER INSERT ON trading_insights BEGIN
+      INSERT INTO trading_insights_fts(rowid, topic, content_md)
+      VALUES (new.id, new.topic, new.content_md);
+    END
+  `)
+} catch {}
+
+try {
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS trading_insights_ad AFTER DELETE ON trading_insights BEGIN
+      INSERT INTO trading_insights_fts(trading_insights_fts, rowid, topic, content_md)
+      VALUES ('delete', old.id, old.topic, old.content_md);
+    END
+  `)
+} catch {}
+
+try {
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS trading_insights_au AFTER UPDATE ON trading_insights BEGIN
+      INSERT INTO trading_insights_fts(trading_insights_fts, rowid, topic, content_md)
+      VALUES ('delete', old.id, old.topic, old.content_md);
+      INSERT INTO trading_insights_fts(rowid, topic, content_md)
+      VALUES (new.id, new.topic, new.content_md);
+    END
+  `)
+} catch {}
 
 module.exports = db;

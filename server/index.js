@@ -9,10 +9,12 @@ const screenshotsRouter = require('./routes/screenshots.js');
 const premarketRouter = require('./routes/premarket.js');
 const newsRouter = require('./routes/news.js');
 const sessionNotesRouter = require('./routes/session_notes.js');
+const ohlcRouter = require('./routes/ohlc.js');
+const indicatorsRouter = require('./routes/indicators.js');
 
 const app = express();
 
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174'] }));
 app.use(express.json({ limit: '50mb' }));
 
 // Serve screenshot files and other static data
@@ -25,6 +27,8 @@ app.use('/api/screenshots', screenshotsRouter);
 app.use('/api/premarket', premarketRouter);
 app.use('/api/news', newsRouter);
 app.use('/api/session-notes', sessionNotesRouter);
+app.use('/api/ohlc', ohlcRouter);
+app.use('/api/indicators', indicatorsRouter);
 
 // Serve static frontend build (Vite 'dist' folder)
 const distPath = path.join(__dirname, '..', 'dist');

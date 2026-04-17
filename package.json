@@ -15,12 +15,17 @@
   "type": "commonjs",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
+    "@klinecharts/pro": "^0.1.1",
     "better-sqlite3": "^12.8.0",
     "concurrently": "^9.2.1",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
+    "duckdb": "^1.4.4",
     "express": "^5.2.1",
+    "klinecharts": "^9.8.12",
+    "luxon": "^3.7.2",
     "multer": "^2.1.1",
+    "openai": "^6.33.0",
     "react-markdown": "^10.1.0"
   },
   "devDependencies": {
